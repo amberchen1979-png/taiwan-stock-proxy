@@ -1,4 +1,4 @@
-// api/twse.js - TWSE 撠 Vercel Serverless Proxy
+// api/twse.js - TWSE 專用 Vercel Serverless Proxy
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,16 +11,14 @@ export default async function handler(req, res) {
     let targetUrl;
 
     if (type === 't86') {
-      // 銝?銝之瘜犖
       if (!date) return res.status(400).json({ error: 'date required (yyyymmdd)' });
       targetUrl = `https://www.twse.com.tw/rwd/zh/fund/T86?response=json&date=${date}&selectType=ALLBUT0999`;
 
     } else if (type === 'stockday') {
-      // 銝???? OHLCV嚗?銵?璅嚗?      if (!date || !stockno) return res.status(400).json({ error: 'date and stockno required' });
+      if (!date || !stockno) return res.status(400).json({ error: 'date and stockno required' });
       targetUrl = `https://www.twse.com.tw/exchangeReport/STOCK_DAY?response=json&date=${date}&stockNo=${stockno}`;
 
     } else if (type === 'mis') {
-      // 銝?/銝??單?銵?
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
       targetUrl = `https://mis.twse.com.tw/stock/api/getStockInfo.jsp?ex_ch=${stockno}&json=1&delay=0`;
 
@@ -34,7 +32,7 @@ export default async function handler(req, res) {
         'Referer': 'https://www.twse.com.tw/',
         'Accept': 'application/json, text/javascript, */*',
       },
-      signal: AbortSignal.timeout(12000),
+      signal: AbortSignal.timeout(20000),
     });
 
     if (!response.ok) {
@@ -45,7 +43,9 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
+    // ★ 完全禁用 CDN 快取，確保每次都拿到當日最新資料
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
     return res.status(200).json(data);
 
   } catch (err) {
