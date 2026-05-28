@@ -2,32 +2,33 @@
 // 解決 TPEx 三大法人 CORS 問題的後端中繼
 
 export default async function handler(req, res) {
-  // CORS headers - 允許你的 GitHub Pages 網域呼叫
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { date, type } = req.query;
-  // type: 'inst' = 三大法人, 'price' = 個股收盤價
+  const { date, type, stockno } = req.query;
   
   if (!date) {
-    return res.status(400).json({ error: 'date parameter required (format: 114/05/27)' });
+    return res.status(400).json({ error: 'date parameter required' });
   }
 
   try {
     let targetUrl;
     
     if (type === 'price') {
-      // 上櫃個股日收盤：用於備援價格抓取
-      const { stockno } = req.query;
+      // 上櫃個股日收盤價
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
       targetUrl = `https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&d=${date}&stkno=${stockno}&o=json`;
+
+    } else if (type === 'monthly') {
+      // ★ 上櫃個股月線 OHLCV（技術指標用）
+      if (!stockno) return res.status(400).json({ error: 'stockno required' });
+      targetUrl = `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock/exchange?date=${date}&stockCode=${stockno}&response=json`;
+
     } else {
-      // 預設：三大法人 (全市場上櫃)
+      // 預設：三大法人全市場上櫃
       targetUrl = `https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&d=${date}&se=EW&s=0,asc&o=json`;
     }
 
@@ -48,8 +49,6 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    
-    // 快取 1 小時（盤後資料不會變動）
     res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
     return res.status(200).json(data);
 
