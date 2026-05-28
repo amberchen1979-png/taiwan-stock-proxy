@@ -1,7 +1,11 @@
 {
   "version": 2,
   "functions": {
-    "api/tpex.js": { "maxDuration": 15 },
-    "api/twse.js": { "maxDuration": 15 }
+    "api/tpex.js": {
+      "maxDuration": 25
+    },
+    "api/twse.js": {
+      "maxDuration": 25
+    }
   }
 }
