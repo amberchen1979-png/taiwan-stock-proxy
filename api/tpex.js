@@ -14,22 +14,25 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'date parameter required' });
   }
 
+  // ★ date 內的斜線必須編碼，否則 TPEx 回傳「參數輸入錯誤」
+  const encodedDate = encodeURIComponent(date);
+
   try {
     let targetUrl;
     
     if (type === 'price') {
       // 上櫃個股日收盤價
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
-      targetUrl = `https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&d=${date}&stkno=${stockno}&o=json`;
+      targetUrl = `https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&d=${encodedDate}&stkno=${stockno}&o=json`;
 
     } else if (type === 'monthly') {
       // ★ 上櫃個股月線 OHLCV（技術指標用）
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
-      targetUrl = `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock/exchange?date=${date}&stockCode=${stockno}&response=json`;
+      targetUrl = `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock/exchange?date=${encodedDate}&stockCode=${stockno}&response=json`;
 
     } else {
       // 預設：三大法人全市場上櫃
-      targetUrl = `https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&d=${date}&se=EW&s=0,asc&o=json`;
+      targetUrl = `https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&d=${encodedDate}&se=EW&s=0,asc&o=json`;
     }
 
     const response = await fetch(targetUrl, {
