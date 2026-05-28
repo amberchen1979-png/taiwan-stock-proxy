@@ -1,15 +1,13 @@
-// api/tpex.js - Vercel Serverless Function
-// 解決 TPEx 三大法人 CORS 問題的後端中繼
-
+// api/tpex.js - TPEx 專用 Vercel Serverless Proxy
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { date, type, stockno } = req.query;
-  
+
   if (!date) {
     return res.status(400).json({ error: 'date parameter required' });
   }
@@ -19,14 +17,12 @@ export default async function handler(req, res) {
 
   try {
     let targetUrl;
-    
+
     if (type === 'price') {
-      // 上櫃個股日收盤價
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
       targetUrl = `https://www.tpex.org.tw/web/stock/aftertrading/daily_close_quotes/stk_quote_result.php?l=zh-tw&d=${encodedDate}&stkno=${stockno}&o=json`;
 
     } else if (type === 'monthly') {
-      // ★ 上櫃個股月線 OHLCV（技術指標用）
       if (!stockno) return res.status(400).json({ error: 'stockno required' });
       targetUrl = `https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock/exchange?date=${encodedDate}&stockCode=${stockno}&response=json`;
 
@@ -45,18 +41,20 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      return res.status(response.status).json({ 
+      return res.status(response.status).json({
         error: `TPEx returned ${response.status}`,
-        url: targetUrl 
+        url: targetUrl
       });
     }
 
     const data = await response.json();
-    res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+    // ★ 完全禁用 CDN 快取，確保每次都拿到當日最新資料
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
     return res.status(200).json(data);
 
   } catch (err) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: err.message,
       hint: 'TPEx server may be down or blocking requests'
     });
