@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     // ★ 上櫃三大法人過濾：只回傳前端需要的持倉/觀察股，大幅縮減 payload
     if (!type && codesSet && codesSet.size > 0 && Array.isArray(data?.aaData)) {
-      data.aaData = data.aaData.filter(row => codesSet.has((row[0] || '').trim()));
+      data.aaData = data.aaData.filter(row => codesSet.has(String(row[0] || '').trim()));
     }
     // ★ 完全禁用 CDN 快取，確保每次都拿到當日最新資料
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
