@@ -5,7 +5,9 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  const { type, date, stockno } = req.query;
+  const { type, date, stockno, codes } = req.query;
+  // codes = 逗號分隔的純代號字串，e.g. "1303,6261,3260"
+  const codesSet = codes ? new Set(codes.split(',').map(c => c.trim()).filter(Boolean)) : null;
 
   try {
     let targetUrl;
@@ -32,7 +34,7 @@ export default async function handler(req, res) {
         'Referer': 'https://www.twse.com.tw/',
         'Accept': 'application/json, text/javascript, */*',
       },
-      signal: AbortSignal.timeout(20000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
@@ -43,6 +45,12 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
+
+    // ★ T86 codes 過濾：只回傳前端需要的持倉股，大幅縮減 payload
+    if (type === 't86' && codesSet && codesSet.size > 0 && Array.isArray(data?.data)) {
+      data.data = data.data.filter(row => codesSet.has((row[0] || '').trim()));
+    }
+
     // ★ 完全禁用 CDN 快取，確保每次都拿到當日最新資料
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
