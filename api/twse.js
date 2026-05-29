@@ -48,7 +48,8 @@ export default async function handler(req, res) {
 
     // ★ T86 codes 過濾：只回傳前端需要的持倉股，大幅縮減 payload
     if (type === 't86' && codesSet && codesSet.size > 0 && Array.isArray(data?.data)) {
-      data.data = data.data.filter(row => codesSet.has(String(row[0] || '').trim()));
+      // ★ row[0] 可能含股票名稱（如「1303南亞」），只取前4碼純代號比對
+      data.data = data.data.filter(row => codesSet.has(String(row[0] || '').trim().substring(0, 4)));
     }
 
     // ★ 完全禁用 CDN 快取，確保每次都拿到當日最新資料
